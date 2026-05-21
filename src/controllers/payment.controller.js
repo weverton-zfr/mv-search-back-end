@@ -1,4 +1,5 @@
 import { paysync } from '../config/paysync.js'
+import { checkAndActivate } from '../services/payment.service.js'
 
 export async function createPayment(req, res){
 
@@ -48,4 +49,30 @@ export async function getPaymentStatus(req, res){
 
   }
 
+}
+
+export async function getCheckAndActivate(req, res) {
+  try {
+
+    const { id } = req.params
+    const userId = req.user.id
+    const plan = req.body.plan
+
+    const result = await checkAndActivate({
+      paymentId: id,
+      userId,
+      plan
+    })
+
+    return res.json({
+      success: true,
+      ...result
+    })
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    })
+  }
 }
