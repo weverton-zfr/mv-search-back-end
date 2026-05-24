@@ -24,12 +24,11 @@ export async function register(req, res) {
 
     const user = data.user
 
-    // cria subscription free
     const { error: subError } = await supabase
       .from('subscriptions')
       .insert({
         user_id: user.id,
-        plan: 'free',
+        plan: 'Free',
         status: 'active'
       })
 

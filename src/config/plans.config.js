@@ -1,15 +1,15 @@
 export const plans = {
-  "6a0d59a429cd04f4c3d49e5f": {
+  "6a12868f7d9c8f18eb320995": {
     name: "Plano Basic Mensal",
     valueCents: 3999
   },
 
-  "6a0d59d729cd04f4c3d4a0c7": {
+  "6a1286af7d9c8f18eb320a9c": {
     name: "Plano Basic Trimensal",
     valueCents: 9999
   },
 
-  "6a0d59f229cd04f4c3d4a306": {
+  "6a1286bb7d9c8f18eb320b67": {
     name: "Plano Anual",
     valueCents: 19999
   }

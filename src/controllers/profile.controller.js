@@ -9,10 +9,7 @@ export async function updateProfile(req, res) {
       name,
       email
     } = req.body
-
-    console.log(userId)
-    console.log(name)
-    console.log(email)
+    
     const { error: authError } =
       await supabase.auth.admin.updateUserById(
         userId,

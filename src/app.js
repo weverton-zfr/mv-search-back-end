@@ -1,19 +1,29 @@
-import express from 'express'
-import cors from 'cors'
-import searchRoutes from './routes/search.routes.js'
-import meRoutes from './routes/me.routes.js'
-import register from './routes/register.routes.js'
-import updateProfile from './routes/profile.routes.js'
-import updatePassword from './routes/profile.routes.js'
-import paymentRoutes from './routes/payment.routes.js'
+import express from "express";
+import cors from "cors";
 
-const app = express()
+import meRoutes from "./routes/me.routes.js";
+import register from "./routes/register.routes.js";
+import updateProfile from "./routes/profile.routes.js";
+import updatePassword from "./routes/profile.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
-app.use(cors())
-app.use(express.json())
+import { startSubscriptionJob } from "./jobs/subscription.job.js";
 
-app.use('/api', searchRoutes, meRoutes, register, updateProfile, updatePassword)
-app.use('/api/payments', paymentRoutes)
+const app = express();
 
+app.use(cors());
+app.use(express.json());
 
-export default app
+app.use(
+  "/api",
+  meRoutes,
+  register,
+  updateProfile,
+  updatePassword
+);
+
+app.use("/api/payments", paymentRoutes);
+
+startSubscriptionJob();
+
+export default app;
