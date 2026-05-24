@@ -15,4 +15,5 @@ app.use(express.json())
 app.use('/api', searchRoutes, meRoutes, register, updateProfile, updatePassword)
 app.use('/api/payments', paymentRoutes)
 
+
 export default app

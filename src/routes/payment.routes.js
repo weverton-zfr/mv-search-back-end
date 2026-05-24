@@ -1,13 +1,20 @@
-import express from 'express'
-import { createPayment, getCheckAndActivate, getPaymentStatus } from '../controllers/payment.controller.js'
-import { authMiddleware } from '../middleware/auth.middleware.js'
+import express from "express";
+import {
+  createPayment,
+  getCheckAndActivate,
+  getPaymentStatus,
+  createCardPayment
+} from "../controllers/payment.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/create-payment', authMiddleware, createPayment)
+router.post("/create-payment", authMiddleware, createPayment);
 
-router.post('/payment/:id/confirm', authMiddleware, getCheckAndActivate)
+router.post("/create-card-payment", authMiddleware, createCardPayment);
 
-router.get('/payment-status/:id', authMiddleware, getPaymentStatus)
+router.post("/payment/:id/confirm", authMiddleware, getCheckAndActivate);
 
-export default router
+router.get("/payment-status/:id", authMiddleware, getPaymentStatus);
+
+export default router;

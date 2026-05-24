@@ -1,9 +1,9 @@
-import axios from 'axios'
+import axios from "axios";
 
 export const paysync = axios.create({
-  baseURL: 'https://api.usepaysync.com/v1',
+  baseURL: "https://api.usepaysync.com/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     Authorization: `Bearer ${process.env.PAYSYNC_API_KEY}`
   }
-})
+});
