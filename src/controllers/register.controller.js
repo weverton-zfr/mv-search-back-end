@@ -43,8 +43,15 @@ export async function register(req, res) {
     })
 
     if (error) {
+      console.log('ERRO NO SIGNUP:', {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        cause: error.cause
+      })
+
       return res.status(400).json({
-        error: error.message
+        error: error.message || 'Erro ao criar usuário.'
       })
     }
 
@@ -75,7 +82,7 @@ export async function register(req, res) {
       })
 
     if (profileError) {
-      console.log(profileError)
+      console.log('ERRO NO PROFILE:', profileError)
 
       return res.status(400).json({
         error: profileError.message
@@ -93,7 +100,7 @@ export async function register(req, res) {
       })
 
     if (subError) {
-      console.log(subError)
+      console.log('ERRO NA SUBSCRIPTION:', subError)
 
       return res.status(400).json({
         error: subError.message
