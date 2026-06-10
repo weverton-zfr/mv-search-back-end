@@ -1,24 +1,50 @@
-import { paysync } from '../config/paysync.js'
-import { activatePlan } from './subscription.service.js'
+import { paysync } from "../config/paysync.js";
+import { activatePlan } from "./subscription.service.js";
+import { plans } from "../config/plans.config.js";
 
-export async function checkAndActivate({ paymentId, userId, plan }) {
-  const response = await paysync.get(`/payments/${paymentId}`)
+function getPaymentProductId(payment) {
+  return (
+    payment.productId ||
+    payment.product_id ||
+    payment.product?.id ||
+    payment.product?.productId ||
+    payment.product?.product_id
+  );
+}
 
-  const payment = response.data
-  console.log(response.data)
+export async function checkAndActivate({ paymentId, userId }) {
+  const response = await paysync.get(`/payments/${paymentId}`);
 
-  if (payment.status === 'paid') {
+  const payment = response.data;
 
-    await activatePlan({ userId, plan, paymentId })
-
+  if (payment.status !== "paid") {
     return {
-      paid: true,
+      paid: false,
       payment
-    }
+    };
   }
+
+  const productId = getPaymentProductId(payment);
+
+  if (!productId) {
+    throw new Error("Produto do pagamento não encontrado.");
+  }
+
+  const selectedPlan = plans[productId];
+
+  if (!selectedPlan) {
+    throw new Error("Plano do pagamento não encontrado ou inativo.");
+  }
+
+  await activatePlan({
+    userId,
+    plan: selectedPlan.name,
+    paymentId
+  });
 
   return {
-    paid: false,
-    payment
-  }
+    paid: true,
+    payment,
+    plan: selectedPlan.name
+  };
 }

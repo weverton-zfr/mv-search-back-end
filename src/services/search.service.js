@@ -1,18 +1,18 @@
-import { supabase } from '../config/supabase.js'
+import axios from "axios";
 
-export async function canUserSearch(userId) {
-  const { count } = await supabase
-    .from('search_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000))
+const searchApi = axios.create({
+  baseURL: process.env.SEARCH_API_URL,
+  timeout: 30000
+});
 
-  return count < 10
-}
+export async function executeSearch(params) {
+  const response = await searchApi.get("/", {
+    params: {
+      token: process.env.SEARCH_API_TOKEN,
+      ...params
+    },
+    validateStatus: () => true
+  });
 
-export async function saveSearch(userId, query) {
-  return await supabase.from('search_logs').insert({
-    user_id: userId,
-    query
-  })
+  return response.data;
 }

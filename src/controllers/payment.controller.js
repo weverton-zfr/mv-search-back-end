@@ -1,24 +1,77 @@
 import { paysync } from "../config/paysync.js";
+import { supabase } from "../config/supabase.js";
 import { checkAndActivate } from "../services/payment.service.js";
 import { plans } from "../config/plans.config.js";
 import { createPaySyncCardPayment } from "../services/paysync.service.js";
+import { activatePlan } from "../services/subscription.service.js";
+
+async function getAuthenticatedCustomer(userId) {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("name, email")
+    .eq("id", userId)
+    .single();
+
+  if (error || !profile) {
+    throw new Error("Perfil do usuário não encontrado.");
+  }
+
+  if (!profile.name || !profile.email) {
+    throw new Error("Nome e email do usuário são obrigatórios.");
+  }
+
+  return {
+    name: profile.name,
+    email: profile.email
+  };
+}
+
+function getSelectedPlan(planID) {
+  if (!planID) {
+    throw new Error("ID do plano é obrigatório.");
+  }
+
+  const selectedPlan = plans[planID];
+
+  if (!selectedPlan) {
+    throw new Error("Plano não encontrado.");
+  }
+
+  return selectedPlan;
+}
 
 export async function createPayment(req, res) {
   try {
-    const { planID, customer } = req.body;
+    const { planID } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Usuário não autenticado."
+      });
+    }
+
+    const selectedPlan = getSelectedPlan(planID);
+    const customer = await getAuthenticatedCustomer(userId);
 
     const response = await paysync.post("/payments", {
       productId: planID,
-      customer
+      customer: {
+        name: customer.name,
+        email: customer.email
+      }
     });
 
-    return res.json(response.data);
+    return res.json({
+      ...response.data,
+      productName: selectedPlan.name,
+      amountCents: selectedPlan.valueCents
+    });
   } catch (err) {
-    console.error("CREATE PAYMENT ERROR:", err?.response?.data || err.message);
-
     return res.status(500).json({
       success: false,
-      error: err?.response?.data || err.message
+      error: err?.response?.data?.error || err.message
     });
   }
 }
@@ -31,11 +84,9 @@ export async function getPaymentStatus(req, res) {
 
     return res.json(response.data);
   } catch (err) {
-    console.error("PAYMENT STATUS ERROR:", err?.response?.data || err.message);
-
     return res.status(500).json({
       success: false,
-      error: err?.response?.data || err.message
+      error: err?.response?.data?.error || err.message
     });
   }
 }
@@ -43,13 +94,18 @@ export async function getPaymentStatus(req, res) {
 export async function getCheckAndActivate(req, res) {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const plan = req.body.plan;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: "Usuário não autenticado."
+      });
+    }
 
     const result = await checkAndActivate({
       paymentId: id,
-      userId,
-      plan
+      userId
     });
 
     return res.json({
@@ -66,31 +122,18 @@ export async function getCheckAndActivate(req, res) {
 
 export async function createCardPayment(req, res) {
   try {
-    const { planID, customer } = req.body;
-    const userId = req.user.id;
+    const { planID } = req.body;
+    const userId = req.user?.id;
 
-    if (!planID) {
-      return res.status(400).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: "ID do plano é obrigatório"
+        error: "Usuário não autenticado."
       });
     }
 
-    if (!customer?.name || !customer?.email) {
-      return res.status(400).json({
-        success: false,
-        error: "Nome e email do cliente são obrigatórios"
-      });
-    }
-
-    const selectedPlan = plans[planID];
-
-    if (!selectedPlan) {
-      return res.status(404).json({
-        success: false,
-        error: "Plano não encontrado"
-      });
-    }
+    const selectedPlan = getSelectedPlan(planID);
+    const customer = await getAuthenticatedCustomer(userId);
 
     const payment = await createPaySyncCardPayment({
       valueCents: selectedPlan.valueCents,
@@ -121,11 +164,64 @@ export async function createCardPayment(req, res) {
       amountCents: selectedPlan.valueCents
     });
   } catch (err) {
-  console.error("CREATE CARD PAYMENT ERROR:", err.message);
-
-  return res.status(500).json({
-    success: false,
-    error: err.message
-  });
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 }
+
+export async function cardWebhook(req, res) {
+  try {
+    const payload = req.body;
+
+    /*
+     * Ajustar caso a Paysync use outro nome
+     */
+    const status =
+      payload.status ||
+      payload.paymentStatus;
+
+    if (status !== "paid") {
+      return res.status(200).json({
+        success: true
+      });
+    }
+
+    const metadata =
+      typeof payload.metadata === "string"
+        ? JSON.parse(payload.metadata)
+        : payload.metadata;
+
+    if (!metadata?.userId) {
+      return res.status(400).json({
+        success: false,
+        error: "Metadata inválido."
+      });
+    }
+
+    await activatePlan({
+      userId: metadata.userId,
+      plan: metadata.plan,
+      paymentId:
+        payload.id ||
+        payload.paymentId
+    });
+
+    return res.status(200).json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.error(
+      "CARD WEBHOOK ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false
+    });
+
+  }
 }

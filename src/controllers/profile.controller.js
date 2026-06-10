@@ -1,118 +1,126 @@
-import { supabase } from '../config/supabase.js'
+import { supabase } from "../config/supabase.js";
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export async function updateProfile(req, res) {
   try {
+    const userId = req.user.id;
 
-    const userId = req.user.id
+    const name = req.body.name?.toString().trim();
+    const email = req.body.email?.toString().trim().toLowerCase();
 
-    const {
-      name,
-      email
-    } = req.body
-    
-    const { error: authError } =
-      await supabase.auth.admin.updateUserById(
-        userId,
-        {
-          email: email
-        }
-      )
+    if (!name || !email) {
+      return res.status(400).json({
+        error: "Nome e email são obrigatórios."
+      });
+    }
+
+    if (name.length < 2 || name.length > 80) {
+      return res.status(400).json({
+        error: "O nome deve ter entre 2 e 80 caracteres."
+      });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({
+        error: "Email inválido."
+      });
+    }
+
+    const { error: authError } = await supabase.auth.admin.updateUserById(
+      userId,
+      {
+        email
+      }
+    );
 
     if (authError) {
-      console.dir(authError, { depth: null })
-
       return res.status(400).json({
         error: authError.message
-      })
+      });
     }
 
     const { data, error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         name,
         email
       })
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.log(error)
-
       return res.status(400).json({
         error: error.message
-      })
+      });
     }
 
-    return res.json(data)
-
-  } catch (err) {
-
-    console.log(err)
-
+    return res.json(data);
+  } catch {
     return res.status(500).json({
-      error: 'Erro interno'
-    })
-
+      error: "Erro interno"
+    });
   }
 }
 
 export async function updatePassword(req, res) {
-
   try {
+    const userId = req.user.id;
 
-    const userId = req.user.id
+    const currentPassword = req.body.currentPassword?.toString();
+    const newPassword = req.body.newPassword?.toString();
 
-    const {
-      currentPassword,
-      newPassword
-    } = req.body
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        error: "Senha atual e nova senha são obrigatórias."
+      });
+    }
 
-    const { data: userData } =
-      await supabase.auth.admin.getUserById(userId)
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        error: "A nova senha deve ter pelo menos 8 caracteres."
+      });
+    }
 
-    const user = userData.user
+    const { data: userData, error: userError } =
+      await supabase.auth.admin.getUserById(userId);
 
-    const { error: loginError } =
-      await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword
-      })
+    if (userError || !userData?.user?.email) {
+      return res.status(400).json({
+        error: "Usuário não encontrado."
+      });
+    }
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: userData.user.email,
+      password: currentPassword
+    });
 
     if (loginError) {
       return res.status(400).json({
-        error: 'Senha atual incorreta'
-      })
+        error: "Senha atual incorreta."
+      });
     }
 
-    const { error } =
-      await supabase.auth.admin.updateUserById(
-        userId,
-        {
-          password: newPassword
-        }
-      )
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword
+    });
 
     if (error) {
-
       return res.status(400).json({
         error: error.message
-      })
-
+      });
     }
 
     return res.json({
       success: true
-    })
-
-  } catch (err) {
-
-    console.log(err)
-
+    });
+  } catch {
     return res.status(500).json({
-      error: 'Erro interno'
-    })
-
+      error: "Erro interno"
+    });
   }
-
 }

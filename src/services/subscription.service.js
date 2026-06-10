@@ -3,20 +3,29 @@ import { sendDiscordMessage } from "./discord.service.js";
 
 const SUBSCRIPTION_TABLE = "subscriptions";
 
-export async function activatePlan({ userId, plan, paymentId }) {
+const PLAN_DURATIONS = {
+  "Plano Básico de Verificação": {
+    months: 1
+  },
+  "Plano Avançado de Verificação": {
+    months: 3
+  },
+  "Plano Profissional de Verificação": {
+    months: 6
+  }
+};
 
+export async function activatePlan({ userId, plan, paymentId }) {
   const expiresAt = new Date();
 
-  if (plan === "Plano Basic Mensal") {
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+  const selectedPlan = PLAN_DURATIONS[plan];
+
+  if (!selectedPlan) {
+    throw new Error(`Plano inválido: ${plan}`);
   }
 
-  if (plan === "Plano Basic Trimensal") {
-    expiresAt.setMonth(expiresAt.getMonth() + 3);
-  }
-
-  if (plan === "Plano Anual") {
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  if (selectedPlan.months) {
+    expiresAt.setMonth(expiresAt.getMonth() + selectedPlan.months);
   }
 
   const payload = {
@@ -39,11 +48,9 @@ export async function activatePlan({ userId, plan, paymentId }) {
   if (error) throw error;
 
   return data;
-
 }
 
 export async function expireSubscriptions() {
-
   const now = new Date().toISOString();
 
   const { data: expiredSubscriptions, error: selectError } = await supabase
@@ -59,7 +66,6 @@ export async function expireSubscriptions() {
   }
 
   for (const subscription of expiredSubscriptions) {
-
     const { data: profile } = await supabase
       .from("profiles")
       .select("name, email")
@@ -77,13 +83,12 @@ export async function expireSubscriptions() {
 `;
 
     await sendDiscordMessage(message);
-
   }
 
   const { data, error } = await supabase
     .from(SUBSCRIPTION_TABLE)
     .update({
-      plan: "Free",
+      plan: "Plano Gratuito",
       status: "inactive",
       expires_at: null,
       payment_id: null
@@ -95,11 +100,9 @@ export async function expireSubscriptions() {
   if (error) throw error;
 
   return data;
-
 }
 
 export async function ensureUserSubscriptionNotExpired(userId) {
-
   const now = new Date().toISOString();
 
   const { data: subscription, error } = await supabase
@@ -115,7 +118,6 @@ export async function ensureUserSubscriptionNotExpired(userId) {
     subscription?.expires_at &&
     subscription.expires_at < now
   ) {
-
     const { data: profile } = await supabase
       .from("profiles")
       .select("name, email")
@@ -137,7 +139,7 @@ export async function ensureUserSubscriptionNotExpired(userId) {
     const { data, error: updateError } = await supabase
       .from(SUBSCRIPTION_TABLE)
       .update({
-        plan: "Free",
+        plan: "Plano Gratuito",
         status: "inactive",
         expires_at: null,
         payment_id: null
@@ -149,9 +151,7 @@ export async function ensureUserSubscriptionNotExpired(userId) {
     if (updateError) throw updateError;
 
     return data;
-
   }
 
   return subscription;
-
 }
