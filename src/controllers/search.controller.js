@@ -42,7 +42,16 @@ const minLengthByType = {
 
 export async function searchController(req, res) {
   try {
-    const { modulo, consulta, vacinas, foto, sus } = req.query;
+    const {
+      modulo,
+      consulta,
+      vacinas,
+      foto,
+      sus,
+      dataNascimento,
+      cidade,
+      uf
+    } = req.query;
 
     if (!modulo || !consulta) {
       return res.status(400).json({
@@ -75,6 +84,20 @@ export async function searchController(req, res) {
       modulo,
       consulta: cleanConsulta
     };
+
+    if (modulo === "name") {
+      if (dataNascimento) {
+        params.dataNascimento = dataNascimento.toString().trim();
+      }
+
+      if (cidade) {
+        params.cidade = cidade.toString().trim().toUpperCase();
+      }
+
+      if (uf) {
+        params.uf = uf.toString().trim().toUpperCase();
+      }
+    }
 
     if (modulo === "cpf") {
       params.vacinas = vacinas === "on" ? "on" : "off";

@@ -1,16 +1,17 @@
 import axios from "axios";
 
-const searchApi = axios.create({
-  baseURL: process.env.SEARCH_API_URL,
-  timeout: 30000
-});
-
 export async function executeSearch(params) {
-  const response = await searchApi.get("/", {
+  const baseURL =
+    params.modulo === "name"
+      ? process.env.SEARCH_API_NAME_URL
+      : process.env.SEARCH_API_URL;
+
+  const response = await axios.get(baseURL, {
     params: {
       token: process.env.SEARCH_API_TOKEN,
       ...params
     },
+    timeout: 30000,
     validateStatus: () => true
   });
 
