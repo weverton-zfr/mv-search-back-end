@@ -139,7 +139,7 @@ export async function createCardPayment(req, res) {
       valueCents: selectedPlan.valueCents,
       description: selectedPlan.name,
 
-      callbackUrl: `${process.env.BACKEND_URL}/api/payments/card-webhook`,
+      callbackUrl: `${process.env.BACKEND_URL}/payments/card-webhook`,
 
       customer: {
         name: customer.name,
