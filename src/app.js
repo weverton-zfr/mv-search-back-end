@@ -13,12 +13,14 @@ import { startSubscriptionJob } from "./jobs/subscription.job.js";
 const app = express();
 
 app.use(cors({
-    origin: [
-      process.env.FRONTEND_URL,
-      "http://localhost:5173"
-    ],
-    credentials: true
-  }));
+  origin: [
+    "http://localhost:5173",
+    "https://mv-search-front-end.vercel.app"
+  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use(
