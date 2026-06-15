@@ -17,12 +17,17 @@ export async function getMe(req, res) {
       .eq("id", userId)
       .maybeSingle();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      throw profileError;
+    }
 
     const subscription = await ensureUserSubscriptionNotExpired(userId);
 
     return res.json({
-      profile,
+      profile: {
+        ...profile,
+        avatar_url: profile?.avatar_url || null
+      },
       subscription
     });
   } catch (err) {

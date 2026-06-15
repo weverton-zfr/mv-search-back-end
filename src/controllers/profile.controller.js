@@ -1,4 +1,5 @@
 import { supabase } from "../config/supabase.js";
+import { uploadAvatar } from "../services/avatar.service.js";
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -10,6 +11,8 @@ export async function updateProfile(req, res) {
 
     const name = req.body.name?.toString().trim();
     const email = req.body.email?.toString().trim().toLowerCase();
+    const avatarBase64 = req.body.avatarBase64;
+    const avatarType = req.body.avatarType?.toString();
 
     if (!name || !email) {
       return res.status(400).json({
@@ -42,12 +45,28 @@ export async function updateProfile(req, res) {
       });
     }
 
+    let avatarUrl = null;
+
+    if (avatarBase64) {
+      avatarUrl = await uploadAvatar({
+        userId,
+        avatarBase64,
+        avatarType
+      });
+    }
+
+    const profileUpdate = {
+      name,
+      email
+    };
+
+    if (avatarUrl) {
+      profileUpdate.avatar_url = avatarUrl;
+    }
+
     const { data, error } = await supabase
       .from("profiles")
-      .update({
-        name,
-        email
-      })
+      .update(profileUpdate)
       .eq("id", userId)
       .select()
       .single();
@@ -59,9 +78,9 @@ export async function updateProfile(req, res) {
     }
 
     return res.json(data);
-  } catch {
+  } catch (err) {
     return res.status(500).json({
-      error: "Erro interno"
+      error: err.message || "Erro interno"
     });
   }
 }

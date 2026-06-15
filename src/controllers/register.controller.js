@@ -1,4 +1,5 @@
 import { supabase } from "../config/supabase.js";
+import { uploadAvatar } from "../services/avatar.service.js";
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -10,6 +11,9 @@ export async function register(req, res) {
     const email = req.body.email?.toString().trim().toLowerCase();
     const password = req.body.password?.toString();
     const termsAccepted = req.body.termsAccepted;
+
+    const avatarBase64 = req.body.avatarBase64;
+    const avatarType = req.body.avatarType?.toString();
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -75,26 +79,39 @@ export async function register(req, res) {
       });
     }
 
+    let avatarUrl = null;
+
+    if (avatarBase64) {
+      avatarUrl = await uploadAvatar({
+        userId: user.id,
+        avatarBase64,
+        avatarType
+      });
+    }
+
+    const profilePayload = {
+      id: user.id,
+      name,
+      email,
+
+      terms_accepted: true,
+      terms_accepted_at: acceptedAt,
+      terms_version: "1.0",
+
+      privacy_accepted: true,
+      privacy_accepted_at: acceptedAt,
+      privacy_version: "1.0"
+    };
+
+    if (avatarUrl) {
+      profilePayload.avatar_url = avatarUrl;
+    }
+
     const { error: profileError } = await supabase
       .from("profiles")
-      .upsert(
-        {
-          id: user.id,
-          name,
-          email,
-
-          terms_accepted: true,
-          terms_accepted_at: acceptedAt,
-          terms_version: "1.0",
-
-          privacy_accepted: true,
-          privacy_accepted_at: acceptedAt,
-          privacy_version: "1.0"
-        },
-        {
-          onConflict: "id"
-        }
-      );
+      .upsert(profilePayload, {
+        onConflict: "id"
+      });
 
     if (profileError) {
       return res.status(400).json({
@@ -128,9 +145,9 @@ export async function register(req, res) {
       success: true,
       message: "Conta criada com sucesso! Verifique seu email para confirmar o cadastro."
     });
-  } catch {
+  } catch (err) {
     return res.status(500).json({
-      error: "Erro interno"
+      error: err.message || "Erro interno"
     });
   }
 }
