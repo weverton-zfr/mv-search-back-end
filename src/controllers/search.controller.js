@@ -24,9 +24,12 @@ const numericModules = [
   "cns",
   "title",
   "vizinhos",
-  "veiculos",
-  "proprietarios"
+  "veiculos"
 ];
+
+const plateModules = ["proprietarios"];
+
+const textModulesToUppercase = ["mother", "father"];
 
 const minLengthByType = {
   cpf: 11,
@@ -37,7 +40,7 @@ const minLengthByType = {
   title: 12,
   vizinhos: 11,
   veiculos: 11,
-  proprietarios: 11
+  proprietarios: 7
 };
 
 export async function searchController(req, res) {
@@ -60,32 +63,47 @@ export async function searchController(req, res) {
       });
     }
 
-    if (!allowedModules.includes(modulo)) {
+    const moduleType = modulo.toString().toLowerCase().trim();
+    const rawConsulta = consulta.toString().trim();
+
+    if (!allowedModules.includes(moduleType)) {
       return res.status(400).json({
         success: false,
         error: "Tipo de consulta inválido."
       });
     }
 
-    const cleanConsulta = numericModules.includes(modulo)
-      ? consulta.toString().replace(/\D/g, "")
-      : consulta.toString().trim();
+    const onlyNumbers = rawConsulta.replace(/\D/g, "");
+    const onlyPlate = rawConsulta.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
-    const minLength = minLengthByType[modulo];
+    const isNumericModule = numericModules.includes(moduleType);
+    const isPlateModule = plateModules.includes(moduleType);
+
+    const cleanConsulta = isNumericModule
+      ? onlyNumbers
+      : isPlateModule
+        ? onlyPlate
+        : textModulesToUppercase.includes(moduleType)
+          ? rawConsulta.toUpperCase()
+          : rawConsulta;
+
+    const minLength = minLengthByType[moduleType];
 
     if (minLength && cleanConsulta.length < minLength) {
       return res.status(400).json({
         success: false,
-        error: `Digite todos os ${minLength} números para realizar esta consulta.`
+        error: isPlateModule
+          ? `Digite uma placa válida com ${minLength} caracteres.`
+          : `Digite todos os ${minLength} números para realizar esta consulta.`
       });
     }
 
     const params = {
-      modulo,
+      modulo: moduleType,
       consulta: cleanConsulta
     };
 
-    if (modulo === "name") {
+    if (moduleType === "name") {
       if (dataNascimento) {
         params.dataNascimento = dataNascimento.toString().trim();
       }
@@ -99,11 +117,13 @@ export async function searchController(req, res) {
       }
     }
 
-    if (modulo === "cpf") {
+    if (moduleType === "cpf") {
       params.vacinas = vacinas === "on" ? "on" : "off";
       params.foto = foto === "on" ? "on" : "off";
       params.sus = sus === "on" ? "on" : "off";
     }
+
+    console.log("PARAMS NORMALIZADOS:", params);
 
     const data = await executeSearch(params);
 
