@@ -15,6 +15,8 @@ const app = express();
 app.use(cors({
    origin: [
       "https://www.mvsearch.com.br/",
+      // "http://localhost:5173"
+
     ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

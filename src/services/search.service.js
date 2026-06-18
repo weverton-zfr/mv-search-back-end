@@ -33,8 +33,5 @@ export async function executeSearch(params) {
     validateStatus: () => true
   });
 
-  console.log("STATUS API EXTERNA:", response.status);
-  console.log("RESPOSTA API EXTERNA:", response.data);
-
   return response.data;
 }
